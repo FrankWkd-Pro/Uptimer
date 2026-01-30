@@ -9,6 +9,25 @@ import { runScheduledTick } from './scheduler/scheduled';
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Minimal CORS support so Pages (or any web UI) can call the API when hosted on a different origin
+// (e.g. Pages on *.pages.dev and API on *.workers.dev). We reflect the Origin to keep it simple and
+// avoid hardcoding a single hostname in the Worker config.
+app.use('/api/*', async (c, next) => {
+  const origin = c.req.header('Origin');
+  if (origin) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Vary', 'Origin');
+    c.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+    c.header('Access-Control-Allow-Headers', 'Authorization,Content-Type');
+  }
+
+  if (c.req.method === 'OPTIONS') {
+    return c.body(null, 204);
+  }
+
+  await next();
+});
+
 app.onError(handleError);
 app.notFound(handleNotFound);
 

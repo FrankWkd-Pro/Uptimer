@@ -72,6 +72,7 @@ jobs:
       # - UPTIMER_PREFIX: Base name for Worker/Pages/D1. Defaults to repo name slug.
       # - UPTIMER_WORKER_NAME / UPTIMER_PAGES_PROJECT / UPTIMER_D1_NAME: Override individual names.
       # - UPTIMER_D1_BINDING: D1 binding name in Worker (default: DB).
+      # - UPTIMER_API_BASE: Web build-time API base (defaults to derived workers.dev URL + /api/v1).
       #
       # Optional secret:
       # - UPTIMER_ADMIN_TOKEN: If set, we will upsert the Worker secret ADMIN_TOKEN.
@@ -269,7 +270,15 @@ jobs:
         working-directory: apps/worker
         run: |
           set -euo pipefail
-          pnpm exec wrangler deploy --config wrangler.ci.toml --keep-vars
+          # Capture output so we can derive workers.dev URL for the web build (optional).
+          deploy_out="$(pnpm exec wrangler deploy --config wrangler.ci.toml --keep-vars 2>&1)"
+          echo "$deploy_out"
+
+          # Best-effort parse; if it fails we can still use a user-provided API base.
+          worker_url="$(echo "$deploy_out" | grep -oE 'https://[^ ]+\\.workers\\.dev' | head -n1 || true)"
+          if [[ -n "$worker_url" ]]; then
+            echo "WORKER_URL=$worker_url" >> "$GITHUB_ENV"
+          fi
 
       - name: Upsert Worker secrets (optional)
         if: ${{ env.UPTIMER_ADMIN_TOKEN != '' }}
@@ -278,6 +287,23 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$UPTIMER_ADMIN_TOKEN" | pnpm exec wrangler secret put ADMIN_TOKEN --name "$WORKER_NAME" --config wrangler.ci.toml
+
+      - name: Compute web API base (for Vite build)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${UPTIMER_API_BASE:-}" ]]; then
+            api_base="$UPTIMER_API_BASE"
+          elif [[ -n "${WORKER_URL:-}" ]]; then
+            api_base="${WORKER_URL}/api/v1"
+          else
+            api_base="/api/v1"
+          fi
+
+          echo "VITE_API_BASE=$api_base" >> "$GITHUB_ENV"
+        env:
+          UPTIMER_API_BASE: ${{ vars.UPTIMER_API_BASE }}
 
       - name: Build Pages (Vite)
         working-directory: apps/web

@@ -28,7 +28,10 @@ import type {
   UptimeResponse,
 } from './types';
 
-const API_BASE = '/api/v1';
+// Build-time override for production deployments.
+// - default: same-origin `/api/v1` (works when you route /api to the Worker on the same hostname)
+// - override: set `VITE_API_BASE` to e.g. `https://<worker>.<subdomain>.workers.dev/api/v1`
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
 
 class ApiError extends Error {
   constructor(
