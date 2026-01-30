@@ -3,10 +3,11 @@ function isValidPort(n: number): boolean {
 }
 
 // v0.x baseline:
-// - allow 80/443
-// - allow >=1024 to avoid obvious port-scanning of well-known ports
+// - allow any valid TCP port (1-65535)
+// NOTE: This increases SSRF/port-scan abuse potential. Keep the blocked host/IP rules below, and rely on
+// admin auth + rate limiting (Cloudflare layer) for additional protection.
 function isAllowedPort(n: number): boolean {
-  return n === 80 || n === 443 || (n >= 1024 && n <= 65535);
+  return n >= 1 && n <= 65535;
 }
 
 function isIpv4Literal(host: string): boolean {
@@ -126,4 +127,3 @@ export function validateTcpTarget(target: string): string | null {
   if (!isAllowedPort(parsed.port)) return 'target port is not allowed';
   return null;
 }
-
