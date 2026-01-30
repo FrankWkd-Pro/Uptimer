@@ -4,6 +4,7 @@ import type { Env } from './env';
 import { handleError, handleNotFound } from './middleware/errors';
 import { adminRoutes } from './routes/admin';
 import { publicRoutes } from './routes/public';
+import { runDailyRollup } from './scheduler/daily-rollup';
 import { runScheduledTick } from './scheduler/scheduled';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -18,7 +19,12 @@ app.route('/api/v1/admin', adminRoutes);
 
 export default {
   fetch: app.fetch,
-  scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
+  scheduled: async (controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
+    if (controller.cron === '0 0 * * *') {
+      await runDailyRollup(env, controller, ctx);
+      return;
+    }
+
     await runScheduledTick(env, ctx);
   },
 };

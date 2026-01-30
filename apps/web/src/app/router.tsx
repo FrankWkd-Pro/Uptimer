@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 
+import { AdminAnalytics } from '../pages/AdminAnalytics';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { AdminLogin } from '../pages/AdminLogin';
 import { StatusPage } from '../pages/StatusPage';
@@ -15,6 +16,13 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  {
+    path: '/admin/analytics',
+    element: (
+      <ProtectedRoute>
+        <AdminAnalytics />
+      </ProtectedRoute>
+    ),
+  },
   { path: '/admin/login', element: <AdminLogin /> },
 ]);
-

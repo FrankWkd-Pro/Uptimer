@@ -187,3 +187,39 @@ export const locks = sqliteTable('locks', {
   name: text('name').primaryKey(),
   expiresAt: integer('expires_at').notNull(),
 });
+
+export const monitorDailyRollups = sqliteTable(
+  'monitor_daily_rollups',
+  {
+    monitorId: integer('monitor_id').notNull(),
+    dayStartAt: integer('day_start_at').notNull(),
+
+    totalSec: integer('total_sec').notNull(),
+    downtimeSec: integer('downtime_sec').notNull(),
+    unknownSec: integer('unknown_sec').notNull(),
+    uptimeSec: integer('uptime_sec').notNull(),
+
+    checksTotal: integer('checks_total').notNull(),
+    checksUp: integer('checks_up').notNull(),
+    checksDown: integer('checks_down').notNull(),
+    checksUnknown: integer('checks_unknown').notNull(),
+    checksMaintenance: integer('checks_maintenance').notNull(),
+
+    avgLatencyMs: integer('avg_latency_ms'),
+    p50LatencyMs: integer('p50_latency_ms'),
+    p95LatencyMs: integer('p95_latency_ms'),
+    latencyHistogramJson: text('latency_histogram_json'),
+
+    createdAt: integer('created_at')
+      .notNull()
+      .default(sql`(CAST(strftime('%s','now') AS INTEGER))`),
+    updatedAt: integer('updated_at')
+      .notNull()
+      .default(sql`(CAST(strftime('%s','now') AS INTEGER))`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.monitorId, t.dayStartAt] }),
+    dayIdx: index('idx_monitor_daily_rollups_day').on(t.dayStartAt),
+    monitorDayIdx: index('idx_monitor_daily_rollups_monitor_day').on(t.monitorId, t.dayStartAt),
+  })
+);

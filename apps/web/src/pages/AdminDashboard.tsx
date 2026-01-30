@@ -188,6 +188,9 @@ export function AdminDashboard() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
           <div className="flex gap-4">
+            <Link to="/admin/analytics" className="text-sm text-gray-600 hover:text-gray-900">
+              Analytics
+            </Link>
             <Link to="/" className="text-sm text-gray-600 hover:text-gray-900">Status Page</Link>
             <button onClick={logout} className="text-sm text-red-600 hover:text-red-800">Logout</button>
           </div>

@@ -1,6 +1,9 @@
 import type {
   AdminMonitor,
   AdminIncidentsResponse,
+  AnalyticsOverviewResponse,
+  AnalyticsOverviewRange,
+  AnalyticsRange,
   CreateMonitorInput,
   CreateIncidentInput,
   CreateIncidentUpdateInput,
@@ -16,9 +19,12 @@ import type {
   PatchMaintenanceWindowInput,
   PatchMonitorInput,
   PatchNotificationChannelInput,
+  PublicUptimeOverviewResponse,
   PublicIncidentsResponse,
   ResolveIncidentInput,
   StatusResponse,
+  MonitorAnalyticsResponse,
+  MonitorOutagesResponse,
   UptimeResponse,
 } from './types';
 
@@ -63,6 +69,11 @@ export async function fetchLatency(monitorId: number, range: '24h' = '24h'): Pro
 export async function fetchUptime(monitorId: number, range: '24h' | '7d' | '30d' = '24h'): Promise<UptimeResponse> {
   const res = await fetch(`${API_BASE}/public/monitors/${monitorId}/uptime?range=${range}`);
   return handleResponse<UptimeResponse>(res);
+}
+
+export async function fetchPublicUptimeOverview(range: '30d' | '90d' = '30d'): Promise<PublicUptimeOverviewResponse> {
+  const res = await fetch(`${API_BASE}/public/analytics/uptime?range=${range}`);
+  return handleResponse<PublicUptimeOverviewResponse>(res);
 }
 
 export { ApiError };
@@ -162,6 +173,41 @@ export async function fetchAdminIncidents(limit = 50): Promise<AdminIncidentsRes
     headers: getAuthHeaders(),
   });
   return handleResponse<AdminIncidentsResponse>(res);
+}
+
+// Admin API - Analytics
+export async function fetchAdminAnalyticsOverview(
+  range: AnalyticsOverviewRange = '24h',
+): Promise<AnalyticsOverviewResponse> {
+  const res = await fetch(`${API_BASE}/admin/analytics/overview?range=${range}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<AnalyticsOverviewResponse>(res);
+}
+
+export async function fetchAdminMonitorAnalytics(
+  monitorId: number,
+  range: AnalyticsRange = '24h',
+): Promise<MonitorAnalyticsResponse> {
+  const res = await fetch(`${API_BASE}/admin/analytics/monitors/${monitorId}?range=${range}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<MonitorAnalyticsResponse>(res);
+}
+
+export async function fetchAdminMonitorOutages(
+  monitorId: number,
+  opts: { range?: AnalyticsRange; limit?: number; cursor?: number } = {},
+): Promise<MonitorOutagesResponse> {
+  const qs = new URLSearchParams();
+  qs.set('range', opts.range ?? '7d');
+  qs.set('limit', String(opts.limit ?? 50));
+  if (opts.cursor !== undefined) qs.set('cursor', String(opts.cursor));
+
+  const res = await fetch(`${API_BASE}/admin/analytics/monitors/${monitorId}/outages?${qs.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<MonitorOutagesResponse>(res);
 }
 
 export async function createIncident(input: CreateIncidentInput): Promise<{ incident: Incident }> {

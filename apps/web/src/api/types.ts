@@ -108,6 +108,95 @@ export interface UptimeResponse {
   uptime_pct: number;
 }
 
+export type AnalyticsRange = '24h' | '7d' | '30d' | '90d';
+export type AnalyticsOverviewRange = '24h' | '7d';
+
+export interface AnalyticsOverviewResponse {
+  range: AnalyticsOverviewRange;
+  range_start_at: number;
+  range_end_at: number;
+  monitors: { total: number };
+  totals: {
+    total_sec: number;
+    downtime_sec: number;
+    uptime_sec: number;
+    uptime_pct: number;
+  };
+  alerts: { count: number };
+  outages: { longest_sec: number | null; mttr_sec: number | null };
+}
+
+export interface MonitorAnalyticsDayPoint {
+  day_start_at: number;
+  total_sec: number;
+  downtime_sec: number;
+  unknown_sec: number;
+  uptime_sec: number;
+  uptime_pct: number;
+  avg_latency_ms: number | null;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  checks_total: number;
+  checks_up: number;
+  checks_down: number;
+  checks_unknown: number;
+  checks_maintenance: number;
+}
+
+export interface MonitorAnalyticsResponse {
+  monitor: { id: number; name: string; type: MonitorType };
+  range: AnalyticsRange;
+  range_start_at: number;
+  range_end_at: number;
+  total_sec: number;
+  downtime_sec: number;
+  unknown_sec: number;
+  uptime_sec: number;
+  uptime_pct: number;
+  unknown_pct: number;
+  avg_latency_ms: number | null;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  checks: { total: number; up: number; down: number; unknown: number; maintenance: number };
+  points: LatencyPoint[];
+  daily: MonitorAnalyticsDayPoint[];
+}
+
+export interface Outage {
+  id: number;
+  monitor_id: number;
+  started_at: number;
+  ended_at: number | null;
+  initial_error: string | null;
+  last_error: string | null;
+}
+
+export interface MonitorOutagesResponse {
+  range: AnalyticsRange;
+  range_start_at: number;
+  range_end_at: number;
+  outages: Outage[];
+  next_cursor: number | null;
+}
+
+export interface PublicUptimeOverviewResponse {
+  generated_at: number;
+  range: '30d' | '90d';
+  range_start_at: number;
+  range_end_at: number;
+  overall: { total_sec: number; downtime_sec: number; unknown_sec: number; uptime_sec: number; uptime_pct: number };
+  monitors: Array<{
+    id: number;
+    name: string;
+    type: MonitorType;
+    total_sec: number;
+    downtime_sec: number;
+    unknown_sec: number;
+    uptime_sec: number;
+    uptime_pct: number;
+  }>;
+}
+
 // Admin Types
 
 export interface AdminMonitor {

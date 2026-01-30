@@ -36,6 +36,7 @@ const STATUS_UPCOMING_MAINTENANCE_LIMIT = 5;
 
 const latencyRangeSchema = z.enum(['24h']);
 const uptimeRangeSchema = z.enum(['24h', '7d', '30d']);
+const uptimeOverviewRangeSchema = z.enum(['30d', '90d']);
 
 function toMonitorStatus(value: string | null): 'up' | 'down' | 'maintenance' | 'paused' | 'unknown' {
   switch (value) {
@@ -902,6 +903,92 @@ publicRoutes.get('/monitors/:id/uptime', async (c) => {
     unknown_sec,
     uptime_sec,
     uptime_pct,
+  });
+});
+
+publicRoutes.get('/analytics/uptime', async (c) => {
+  const range = uptimeOverviewRangeSchema.optional().default('30d').parse(c.req.query('range'));
+
+  const now = Math.floor(Date.now() / 1000);
+  const rangeEnd = Math.floor(now / 86400) * 86400; // full days only (UTC)
+  const rangeStart = rangeEnd - (range === '30d' ? 30 * 86400 : 90 * 86400);
+
+  const { results: monitorRows } = await c.env.DB.prepare(
+    `
+      SELECT id, name, type
+      FROM monitors
+      WHERE is_active = 1
+      ORDER BY id
+    `
+  ).all<{ id: number; name: string; type: string }>();
+
+  const monitors = monitorRows ?? [];
+
+  const { results: sumRows } = await c.env.DB.prepare(
+    `
+      SELECT
+        monitor_id,
+        SUM(total_sec) AS total_sec,
+        SUM(downtime_sec) AS downtime_sec,
+        SUM(unknown_sec) AS unknown_sec,
+        SUM(uptime_sec) AS uptime_sec
+      FROM monitor_daily_rollups
+      WHERE day_start_at >= ?1 AND day_start_at < ?2
+      GROUP BY monitor_id
+    `
+  )
+    .bind(rangeStart, rangeEnd)
+    .all<{
+      monitor_id: number;
+      total_sec: number;
+      downtime_sec: number;
+      unknown_sec: number;
+      uptime_sec: number;
+    }>();
+
+  const byMonitorId = new Map<number, { total_sec: number; downtime_sec: number; unknown_sec: number; uptime_sec: number }>();
+  for (const r of sumRows ?? []) {
+    byMonitorId.set(r.monitor_id, {
+      total_sec: r.total_sec ?? 0,
+      downtime_sec: r.downtime_sec ?? 0,
+      unknown_sec: r.unknown_sec ?? 0,
+      uptime_sec: r.uptime_sec ?? 0,
+    });
+  }
+
+  let total_sec = 0;
+  let downtime_sec = 0;
+  let unknown_sec = 0;
+  let uptime_sec = 0;
+
+  const out = monitors.map((m) => {
+    const totals = byMonitorId.get(m.id) ?? { total_sec: 0, downtime_sec: 0, unknown_sec: 0, uptime_sec: 0 };
+    total_sec += totals.total_sec;
+    downtime_sec += totals.downtime_sec;
+    unknown_sec += totals.unknown_sec;
+    uptime_sec += totals.uptime_sec;
+    const uptime_pct = totals.total_sec === 0 ? 0 : (totals.uptime_sec / totals.total_sec) * 100;
+    return {
+      id: m.id,
+      name: m.name,
+      type: m.type,
+      total_sec: totals.total_sec,
+      downtime_sec: totals.downtime_sec,
+      unknown_sec: totals.unknown_sec,
+      uptime_sec: totals.uptime_sec,
+      uptime_pct,
+    };
+  });
+
+  const overall_uptime_pct = total_sec === 0 ? 0 : (uptime_sec / total_sec) * 100;
+
+  return c.json({
+    generated_at: now,
+    range,
+    range_start_at: rangeStart,
+    range_end_at: rangeEnd,
+    overall: { total_sec, downtime_sec, unknown_sec, uptime_sec, uptime_pct: overall_uptime_pct },
+    monitors: out,
   });
 });
 

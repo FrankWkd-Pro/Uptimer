@@ -21,6 +21,8 @@ import { runHttpCheck } from '../monitor/http';
 import { validateHttpTarget, validateTcpTarget } from '../monitor/targets';
 import { runTcpCheck } from '../monitor/tcp';
 import { dispatchWebhookToChannel, dispatchWebhookToChannels, type WebhookChannel } from '../notify/webhook';
+import { adminAnalyticsRoutes } from './admin-analytics';
+import { adminExportsRoutes } from './admin-exports';
 import {
   createIncidentInputSchema,
   createIncidentUpdateInputSchema,
@@ -39,6 +41,10 @@ import {
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
 adminRoutes.use('*', requireAdmin);
+
+// Keep analytics endpoints in a separate router to reduce churn in this already-large file.
+adminRoutes.route('/analytics', adminAnalyticsRoutes);
+adminRoutes.route('/exports', adminExportsRoutes);
 
 function monitorRowToApi(row: typeof monitors.$inferSelect) {
   return {
