@@ -374,6 +374,42 @@ adminRoutes.patch('/notification-channels/:id', async (c) => {
   return c.json({ notification_channel: notificationChannelRowToApi(updated) });
 });
 
+adminRoutes.delete('/notification-channels/:id', async (c) => {
+  const id = z.coerce.number().int().positive().parse(c.req.param('id'));
+
+  const existing = await c.env.DB.prepare(
+    `
+      SELECT id
+      FROM notification_channels
+      WHERE id = ?1
+    `
+  )
+    .bind(id)
+    .first<{ id: number }>();
+
+  if (!existing) {
+    throw new AppError(404, 'NOT_FOUND', 'Notification channel not found');
+  }
+
+  // Keep notification_deliveries tidy; these rows become orphaned once the channel is removed.
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `
+        DELETE FROM notification_deliveries
+        WHERE channel_id = ?1
+      `
+    ).bind(id),
+    c.env.DB.prepare(
+      `
+        DELETE FROM notification_channels
+        WHERE id = ?1
+      `
+    ).bind(id),
+  ]);
+
+  return c.json({ deleted: true });
+});
+
 type NotificationDeliveryRow = {
   status: string;
   http_status: number | null;

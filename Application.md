@@ -448,6 +448,7 @@ Admin:
 - `GET /api/v1/admin/notification-channels`
 - `POST /api/v1/admin/notification-channels`
 - `PATCH /api/v1/admin/notification-channels/:id`
+- `DELETE /api/v1/admin/notification-channels/:id`
 - `POST /api/v1/admin/notification-channels/:id/test`
 
 ### 8.4 分页与过滤

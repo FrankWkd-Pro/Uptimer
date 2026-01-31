@@ -523,6 +523,7 @@ Admin（Bearer Token）：
 - `GET /api/v1/admin/notification-channels`
 - `POST /api/v1/admin/notification-channels`
 - `PATCH /api/v1/admin/notification-channels/:id`
+- `DELETE /api/v1/admin/notification-channels/:id`
 - `POST /api/v1/admin/notification-channels/:id/test`
 - `GET /api/v1/admin/incidents`
 - `POST /api/v1/admin/incidents`

@@ -193,6 +193,14 @@ export async function testNotificationChannel(id: number): Promise<NotificationC
   return handleResponse<NotificationChannelTestResult>(res);
 }
 
+export async function deleteNotificationChannel(id: number): Promise<{ deleted: boolean }> {
+  const res = await fetch(`${API_BASE}/admin/notification-channels/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<{ deleted: boolean }>(res);
+}
+
 // Public API - Incidents
 export async function fetchPublicIncidents(limit = 20, cursor?: number): Promise<PublicIncidentsResponse> {
   const qs = new URLSearchParams({ limit: String(limit) });

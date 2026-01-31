@@ -6,7 +6,7 @@ import { useAuth } from '../app/AuthContext';
 import {
   ApiError,
   fetchAdminMonitors, createMonitor, updateMonitor, deleteMonitor, testMonitor,
-  fetchNotificationChannels, createNotificationChannel, updateNotificationChannel, testNotificationChannel,
+  fetchNotificationChannels, createNotificationChannel, updateNotificationChannel, testNotificationChannel, deleteNotificationChannel,
   fetchAdminIncidents, createIncident, addIncidentUpdate, resolveIncident, deleteIncident,
   fetchMaintenanceWindows, createMaintenanceWindow, updateMaintenanceWindow, deleteMaintenanceWindow,
 } from '../api/client';
@@ -70,6 +70,8 @@ export function AdminDashboard() {
   const createChannelMut = useMutation({ mutationFn: createNotificationChannel, onSuccess: () => { invalidate('admin-channels'); closeModal(); } });
   const updateChannelMut = useMutation({ mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateNotificationChannel>[1] }) => updateNotificationChannel(id, data), onSuccess: () => { invalidate('admin-channels'); closeModal(); } });
   const testChannelMut = useMutation({ mutationFn: testNotificationChannel, onSettled: () => setTestingChannelId(null) });
+
+  const deleteChannelMut = useMutation({ mutationFn: deleteNotificationChannel, onSuccess: () => invalidate('admin-channels') });
 
   const createIncidentMut = useMutation({ mutationFn: createIncident, onSuccess: () => { invalidate('admin-incidents'); closeModal(); } });
   const addIncidentUpdateMut = useMutation({ mutationFn: ({ id, data }: { id: number; data: Parameters<typeof addIncidentUpdate>[1] }) => addIncidentUpdate(id, data), onSuccess: () => { invalidate('admin-incidents'); closeModal(); } });
@@ -205,6 +207,7 @@ export function AdminDashboard() {
                             <div className="flex items-center justify-end gap-1 sm:gap-0">
                               <button onClick={() => { setTestingChannelId(ch.id); testChannelMut.mutate(ch.id); }} disabled={testingChannelId === ch.id} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 px-2 sm:px-2.5 py-1.5 rounded-md transition-colors">{testingChannelId === ch.id ? 'Testing...' : 'Test'}</button>
                               <button onClick={() => setModal({ type: 'edit-channel', channel: ch })} className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 sm:px-2.5 py-1.5 rounded-md transition-colors">Edit</button>
+                              <button onClick={() => confirm(`Delete "${ch.name}"?`) && deleteChannelMut.mutate(ch.id)} className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 sm:px-2.5 py-1.5 rounded-md transition-colors">Delete</button>
                             </div>
                           </td>
                         </tr>
