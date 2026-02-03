@@ -58,7 +58,7 @@ function formatPct(v: number): string {
   return `${v.toFixed(3)}%`;
 }
 
-function MonitorCard({ monitor, onSelect }: { monitor: PublicMonitor; onSelect: () => void }) {
+function MonitorCard({ monitor, onSelect, onDayClick }: { monitor: PublicMonitor; onSelect: () => void; onDayClick: (dayStartAt: number) => void }) {
   const uptime30d = monitor.uptime_30d;
 
   return (
@@ -78,7 +78,7 @@ function MonitorCard({ monitor, onSelect }: { monitor: PublicMonitor; onSelect: 
         <Badge variant={getStatusBadgeVariant(monitor.status)}>{monitor.status}</Badge>
       </div>
 
-      <UptimeBar30d days={monitor.uptime_days} maxBars={30} />
+      <UptimeBar30d days={monitor.uptime_days} maxBars={30} onDayClick={onDayClick} />
 
       <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -565,16 +565,12 @@ export function StatusPage() {
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Services</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {data.monitors.map((monitor) => (
-              <div key={monitor.id} className="space-y-2">
-                <MonitorCard monitor={monitor} onSelect={() => setSelectedMonitorId(monitor.id)} />
-                <div className="px-1">
-                  <UptimeBar30d
-                    days={monitor.uptime_days}
-                    maxBars={30}
-                    onDayClick={(dayStartAt) => setSelectedDay({ monitorId: monitor.id, dayStartAt })}
-                  />
-                </div>
-              </div>
+              <MonitorCard
+                key={monitor.id}
+                monitor={monitor}
+                onSelect={() => setSelectedMonitorId(monitor.id)}
+                onDayClick={(dayStartAt) => setSelectedDay({ monitorId: monitor.id, dayStartAt })}
+              />
             ))}
           </div>
           {data.monitors.length === 0 && (
