@@ -123,6 +123,14 @@ export function UptimeBar30d({ days, maxBars = 30, onDayClick }: UptimeBar30dPro
   return (
     <>
       <div className="flex gap-[2px] sm:gap-[3px] h-6 sm:h-8 items-end">
+        {emptyCount > 0 &&
+          Array.from({ length: emptyCount }).map((_, idx) => (
+            <div
+              key={`empty-${idx}`}
+              className="flex-1 min-w-[3px] sm:min-w-[4px] max-w-[6px] sm:max-w-[8px] h-[100%] rounded-sm bg-slate-200 dark:bg-slate-700"
+            />
+          ))}
+
         {displayDays.map((d) => {
           const pct = d.uptime_pct;
 
@@ -144,14 +152,6 @@ export function UptimeBar30d({ days, maxBars = 30, onDayClick }: UptimeBar30dPro
             />
           );
         })}
-
-        {emptyCount > 0 &&
-          Array.from({ length: emptyCount }).map((_, idx) => (
-            <div
-              key={`empty-${idx}`}
-              className="flex-1 min-w-[3px] sm:min-w-[4px] max-w-[6px] sm:max-w-[8px] h-[100%] rounded-sm bg-slate-200 dark:bg-slate-700"
-            />
-          ))}
       </div>
 
       {tooltip && <Tooltip day={tooltip.day} position={tooltip.position} />}
