@@ -353,6 +353,11 @@ export interface PublicIncidentsResponse {
   next_cursor: number | null;
 }
 
+export interface PublicMaintenanceWindowsResponse {
+  maintenance_windows: MaintenanceWindow[];
+  next_cursor: number | null;
+}
+
 export interface AdminIncidentsResponse {
   incidents: Incident[];
 }

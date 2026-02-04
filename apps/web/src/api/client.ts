@@ -23,6 +23,7 @@ import type {
   PatchNotificationChannelInput,
   PublicUptimeOverviewResponse,
   PublicIncidentsResponse,
+  PublicMaintenanceWindowsResponse,
   ResolveIncidentInput,
   StatusResponse,
   MonitorAnalyticsResponse,
@@ -332,11 +333,27 @@ export async function deleteNotificationChannel(id: number): Promise<{ deleted: 
 }
 
 // Public API - Incidents
-export async function fetchPublicIncidents(limit = 20, cursor?: number): Promise<PublicIncidentsResponse> {
+export async function fetchPublicIncidents(
+  limit = 20,
+  cursor?: number,
+  opts: { resolvedOnly?: boolean } = {}
+): Promise<PublicIncidentsResponse> {
   const qs = new URLSearchParams({ limit: String(limit) });
+  if (opts.resolvedOnly) qs.set('resolved_only', '1');
   if (cursor) qs.set('cursor', String(cursor));
   const res = await fetch(`${API_BASE}/public/incidents?${qs.toString()}`);
   return handleResponse<PublicIncidentsResponse>(res);
+}
+
+// Public API - Maintenance windows
+export async function fetchPublicMaintenanceWindows(
+  limit = 20,
+  cursor?: number
+): Promise<PublicMaintenanceWindowsResponse> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (cursor) qs.set('cursor', String(cursor));
+  const res = await fetch(`${API_BASE}/public/maintenance-windows?${qs.toString()}`);
+  return handleResponse<PublicMaintenanceWindowsResponse>(res);
 }
 
 // Admin API - Incidents

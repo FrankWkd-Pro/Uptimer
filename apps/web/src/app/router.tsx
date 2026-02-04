@@ -14,6 +14,16 @@ const AdminAnalytics = lazy(async () => {
   return { default: mod.AdminAnalytics };
 });
 
+const IncidentHistoryPage = lazy(async () => {
+  const mod = await import('../pages/IncidentHistoryPage');
+  return { default: mod.IncidentHistoryPage };
+});
+
+const MaintenanceHistoryPage = lazy(async () => {
+  const mod = await import('../pages/MaintenanceHistoryPage');
+  return { default: mod.MaintenanceHistoryPage };
+});
+
 const AdminLogin = lazy(async () => {
   const mod = await import('../pages/AdminLogin');
   return { default: mod.AdminLogin };
@@ -25,6 +35,22 @@ function PageFallback() {
 
 export const router = createBrowserRouter([
   { path: '/', element: <StatusPage /> },
+  {
+    path: '/history/incidents',
+    element: (
+      <Suspense fallback={<PageFallback />}>
+        <IncidentHistoryPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/history/maintenance',
+    element: (
+      <Suspense fallback={<PageFallback />}>
+        <MaintenanceHistoryPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/admin',
     element: (

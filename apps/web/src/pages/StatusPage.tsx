@@ -1,14 +1,16 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { fetchLatency, fetchPublicIncidents, fetchPublicMonitorOutages, fetchStatus } from '../api/client';
-import type { Incident, MonitorStatus, Outage, PublicMonitor, StatusResponse } from '../api/types';
+import { fetchLatency, fetchPublicIncidents, fetchPublicMaintenanceWindows, fetchPublicMonitorOutages, fetchStatus } from '../api/client';
+import type { Incident, MaintenanceWindow, MonitorStatus, Outage, PublicMonitor, StatusResponse } from '../api/types';
 import { DayDowntimeModal } from '../components/DayDowntimeModal';
 import { Markdown } from '../components/Markdown';
 import { UptimeBar30d } from '../components/UptimeBar30d';
 import { formatDateTime, formatTime } from '../utils/datetime';
 import { Badge, Card, StatusDot, ThemeToggle } from '../components/ui';
+
+type MaintenanceHistoryPreview = Pick<MaintenanceWindow, 'id' | 'title' | 'message' | 'starts_at' | 'ends_at' | 'monitor_ids'>;
 
 type BannerStatus = StatusResponse['banner']['status'];
 
@@ -416,20 +418,29 @@ export function StatusPage() {
     return all.filter((o) => o.started_at < dayEnd && (o.ended_at ?? dayEnd) > dayStart);
   }, [outagesQuery.data?.outages, selectedDay]);
 
-  const incidentsQuery = useInfiniteQuery({
-    queryKey: ['public-incidents'],
-    queryFn: ({ pageParam }) => {
-      const cursor = typeof pageParam === 'number' ? pageParam : undefined;
-      return fetchPublicIncidents(20, cursor);
-    },
-    initialPageParam: undefined as number | undefined,
-    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  const resolvedHistoryQuery = useQuery({
+    queryKey: ['public-incidents', 'resolved', 'preview'],
+    queryFn: () => fetchPublicIncidents(1, undefined, { resolvedOnly: true }),
   });
 
-  const resolvedIncidents = useMemo(() => {
-    const pages = incidentsQuery.data?.pages ?? [];
-    return pages.flatMap((p) => p.incidents).filter((it) => it.status === 'resolved');
-  }, [incidentsQuery.data]);
+  const maintenanceHistoryQuery = useQuery({
+    queryKey: ['public-maintenance-windows', 'history', 'preview'],
+    queryFn: () => fetchPublicMaintenanceWindows(1),
+  });
+
+  const resolvedIncidentPreview = resolvedHistoryQuery.data?.incidents[0] ?? null;
+  const maintenanceHistoryPreview = maintenanceHistoryQuery.data?.maintenance_windows[0] ?? null;
+
+  const maintenanceHistoryPreviewSafe: MaintenanceHistoryPreview | null = maintenanceHistoryPreview
+    ? {
+        id: maintenanceHistoryPreview.id,
+        title: maintenanceHistoryPreview.title,
+        message: maintenanceHistoryPreview.message,
+        starts_at: maintenanceHistoryPreview.starts_at,
+        ends_at: maintenanceHistoryPreview.ends_at,
+        monitor_ids: maintenanceHistoryPreview.monitor_ids,
+      }
+    : null;
 
   if (statusQuery.isLoading) {
     return <StatusPageSkeleton />;
@@ -616,64 +627,6 @@ export function StatusPage() {
           </section>
         )}
 
-        {/* Incident History */}
-        <section className="mb-10">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <svg
-              className="w-5 h-5 text-slate-500 dark:text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            Incident History
-          </h3>
-
-          {incidentsQuery.isLoading ? (
-            <Card className="p-6 text-center">
-              <p className="text-slate-500 dark:text-slate-400">Loading incidents…</p>
-            </Card>
-          ) : incidentsQuery.isError ? (
-            <Card className="p-6 text-center">
-              <p className="text-sm text-red-600 dark:text-red-400">Failed to load incident history</p>
-            </Card>
-          ) : resolvedIncidents.length > 0 ? (
-            <>
-              <div className="space-y-3">
-                {resolvedIncidents.map((it) => (
-                  <IncidentCard
-                    key={it.id}
-                    incident={it}
-                    timeZone={timeZone}
-                    onClick={() => setSelectedIncident(it)}
-                  />
-                ))}
-              </div>
-
-              {incidentsQuery.hasNextPage && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => incidentsQuery.fetchNextPage()}
-                    disabled={incidentsQuery.isFetchingNextPage}
-                    className="px-3 py-2 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50"
-                  >
-                    {incidentsQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <Card className="p-6 text-center">
-              <p className="text-slate-500 dark:text-slate-400">No past incidents</p>
-            </Card>
-          )}
-        </section>
         {/* Monitors */}
         <section>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Services</h3>
@@ -694,6 +647,80 @@ export function StatusPage() {
             </Card>
           )}
         </section>
+
+        <section className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-10">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Incident History</h3>
+              <Link
+                to="/history/incidents"
+                className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              >
+                View more
+              </Link>
+            </div>
+
+            {resolvedHistoryQuery.isLoading ? (
+              <Card className="p-6 text-center">
+                <p className="text-slate-500 dark:text-slate-400">Loading…</p>
+              </Card>
+            ) : resolvedHistoryQuery.isError ? (
+              <Card className="p-6 text-center">
+                <p className="text-sm text-red-600 dark:text-red-400">Failed to load incident history</p>
+              </Card>
+            ) : resolvedIncidentPreview ? (
+              <IncidentCard
+                incident={resolvedIncidentPreview}
+                timeZone={timeZone}
+                onClick={() => setSelectedIncident(resolvedIncidentPreview)}
+              />
+            ) : (
+              <Card className="p-6 text-center">
+                <p className="text-slate-500 dark:text-slate-400">No past incidents</p>
+              </Card>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Maintenance History</h3>
+              <Link
+                to="/history/maintenance"
+                className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              >
+                View more
+              </Link>
+            </div>
+
+            {maintenanceHistoryQuery.isLoading ? (
+              <Card className="p-6 text-center">
+                <p className="text-slate-500 dark:text-slate-400">Loading…</p>
+              </Card>
+            ) : maintenanceHistoryQuery.isError ? (
+              <Card className="p-6 text-center">
+                <p className="text-sm text-red-600 dark:text-red-400">Failed to load maintenance history</p>
+              </Card>
+            ) : maintenanceHistoryPreviewSafe ? (
+              <Card className="p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100">{maintenanceHistoryPreviewSafe.title}</h4>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    {formatDateTime(maintenanceHistoryPreviewSafe.starts_at, timeZone)} – {formatDateTime(maintenanceHistoryPreviewSafe.ends_at, timeZone)}
+                  </span>
+                </div>
+                <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                  Affected: {maintenanceHistoryPreviewSafe.monitor_ids.map((id) => monitorNames.get(id) ?? `#${id}`).join(', ')}
+                </div>
+                {maintenanceHistoryPreviewSafe.message && <Markdown text={maintenanceHistoryPreviewSafe.message} />}
+              </Card>
+            ) : (
+              <Card className="p-6 text-center">
+                <p className="text-slate-500 dark:text-slate-400">No past maintenance windows</p>
+              </Card>
+            )}
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}

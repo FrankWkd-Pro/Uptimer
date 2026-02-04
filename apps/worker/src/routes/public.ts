@@ -359,6 +359,57 @@ async function listIncidentMonitorIdsByIncidentId(db: D1Database, incidentIds: n
   return byIncident;
 }
 
+type MaintenanceWindowRow = {
+  id: number;
+  title: string;
+  message: string | null;
+  starts_at: number;
+  ends_at: number;
+  created_at: number;
+};
+
+type MaintenanceWindowMonitorLinkRow = {
+  maintenance_window_id: number;
+  monitor_id: number;
+};
+
+function maintenanceWindowRowToApi(row: MaintenanceWindowRow, monitorIds: number[] = []) {
+  return {
+    id: row.id,
+    title: row.title,
+    message: row.message,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    created_at: row.created_at,
+    monitor_ids: monitorIds,
+  };
+}
+
+async function listMaintenanceWindowMonitorIdsByWindowId(
+  db: D1Database,
+  windowIds: number[]
+): Promise<Map<number, number[]>> {
+  const byWindow = new Map<number, number[]>();
+  if (windowIds.length === 0) return byWindow;
+
+  const placeholders = windowIds.map((_, idx) => `?${idx + 1}`).join(', ');
+  const sql = `
+    SELECT maintenance_window_id, monitor_id
+    FROM maintenance_window_monitors
+    WHERE maintenance_window_id IN (${placeholders})
+    ORDER BY maintenance_window_id, monitor_id
+  `;
+
+  const { results } = await db.prepare(sql).bind(...windowIds).all<MaintenanceWindowMonitorLinkRow>();
+  for (const r of results ?? []) {
+    const existing = byWindow.get(r.maintenance_window_id) ?? [];
+    existing.push(r.monitor_id);
+    byWindow.set(r.maintenance_window_id, existing);
+  }
+
+  return byWindow;
+}
+
 publicRoutes.get('/status', async (c) => {
   const now = Math.floor(Date.now() / 1000);
 
@@ -413,21 +464,28 @@ publicRoutes.get('/status', async (c) => {
 publicRoutes.get('/incidents', async (c) => {
   const limit = z.coerce.number().int().min(1).max(200).optional().default(20).parse(c.req.query('limit'));
   const cursor = z.coerce.number().int().positive().optional().parse(c.req.query('cursor'));
+  const resolvedOnly =
+    z.coerce.number().int().min(0).max(1).optional().default(0).parse(c.req.query('resolved_only')) === 1;
 
-  const { results: activeRows } = await c.env.DB.prepare(
-    `
-      SELECT id, title, status, impact, message, started_at, resolved_at
-      FROM incidents
-      WHERE status != 'resolved'
-      ORDER BY started_at DESC, id DESC
-      LIMIT ?1
-    `
-  )
-    .bind(limit)
-    .all<IncidentRow>();
+  let active: IncidentRow[] = [];
+  let remaining = limit;
 
-  const active = activeRows ?? [];
-  const remaining = Math.max(0, limit - active.length);
+  if (!resolvedOnly) {
+    const { results: activeRows } = await c.env.DB.prepare(
+      `
+        SELECT id, title, status, impact, message, started_at, resolved_at
+        FROM incidents
+        WHERE status != 'resolved'
+        ORDER BY started_at DESC, id DESC
+        LIMIT ?1
+      `
+    )
+      .bind(limit)
+      .all<IncidentRow>();
+
+    active = activeRows ?? [];
+    remaining = Math.max(0, limit - active.length);
+  }
 
   let resolved: IncidentRow[] = [];
   let next_cursor: number | null = null;
@@ -484,6 +542,62 @@ publicRoutes.get('/incidents', async (c) => {
   return c.json({
     incidents: combined.map((r) =>
       incidentRowToApi(r, updatesByIncidentId.get(r.id) ?? [], monitorIdsByIncidentId.get(r.id) ?? [])
+    ),
+    next_cursor,
+  });
+});
+
+publicRoutes.get('/maintenance-windows', async (c) => {
+  const limit = z.coerce.number().int().min(1).max(200).optional().default(20).parse(c.req.query('limit'));
+  const cursor = z.coerce.number().int().positive().optional().parse(c.req.query('cursor'));
+
+  const now = Math.floor(Date.now() / 1000);
+  const limitPlusOne = limit + 1;
+
+  const baseSql = `
+    SELECT id, title, message, starts_at, ends_at, created_at
+    FROM maintenance_windows
+    WHERE ends_at <= ?1
+  `;
+
+  const { results: windowRows } = cursor
+    ? await c.env.DB.prepare(
+        `
+          ${baseSql}
+            AND id < ?3
+          ORDER BY id DESC
+          LIMIT ?2
+        `
+      )
+        .bind(now, limitPlusOne, cursor)
+        .all<MaintenanceWindowRow>()
+    : await c.env.DB.prepare(
+        `
+          ${baseSql}
+          ORDER BY id DESC
+          LIMIT ?2
+        `
+      )
+        .bind(now, limitPlusOne)
+        .all<MaintenanceWindowRow>();
+
+  const allWindows = windowRows ?? [];
+  const windows = allWindows.slice(0, limit);
+
+  let next_cursor: number | null = null;
+  if (allWindows.length > limit) {
+    const last = windows[windows.length - 1];
+    next_cursor = last ? last.id : null;
+  }
+
+  const monitorIdsByWindowId = await listMaintenanceWindowMonitorIdsByWindowId(
+    c.env.DB,
+    windows.map((w) => w.id)
+  );
+
+  return c.json({
+    maintenance_windows: windows.map((w) =>
+      maintenanceWindowRowToApi(w, monitorIdsByWindowId.get(w.id) ?? [])
     ),
     next_cursor,
   });
