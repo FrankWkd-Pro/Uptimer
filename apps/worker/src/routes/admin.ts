@@ -18,6 +18,7 @@ import {
 import type { Env } from '../env';
 import { requireAdmin } from '../middleware/auth';
 import { AppError } from '../middleware/errors';
+import { requireAdminRateLimit } from '../middleware/rate-limit';
 import { computePublicStatusPayload } from '../public/status';
 import { refreshPublicStatusSnapshot } from '../snapshots';
 import { runHttpCheck } from '../monitor/http';
@@ -43,6 +44,17 @@ import {
 } from '../schemas/notification-channels';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
+
+adminRoutes.use('*', requireAdminRateLimit);
+
+// Lightweight token verification endpoint for the web UI.
+//
+// The admin UI is a static SPA and cannot know whether a token is valid without
+// calling the Worker. Exposing a dedicated endpoint lets the UI validate a token
+// before entering the admin panel.
+adminRoutes.get('/auth/verify', requireAdmin, (c) => {
+  return c.json({ ok: true });
+});
 
 adminRoutes.use('*', requireAdmin);
 

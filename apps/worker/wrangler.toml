@@ -13,3 +13,5 @@ database_id = "00000000-0000-0000-0000-000000000000"
 
 # Keep this table even if empty so `wrangler dev` loads secrets/vars from `.dev.vars`.
 [vars]
+ADMIN_RATE_LIMIT_MAX = "60"
+ADMIN_RATE_LIMIT_WINDOW_SEC = "60"

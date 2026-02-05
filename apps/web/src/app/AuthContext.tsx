@@ -1,33 +1,104 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react';
+
+import { verifyAdminToken } from '../api/client';
+
+const LS_ADMIN_TOKEN_KEY = 'admin_token';
+
+type AuthStatus = 'unauthenticated' | 'checking' | 'authenticated';
 
 interface AuthContextValue {
+  status: AuthStatus;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
+  ensureValidToken: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('admin_token');
+  const [token, setToken] = useState<string | null>(() => {
+    const raw = localStorage.getItem(LS_ADMIN_TOKEN_KEY);
+    return raw && raw.trim() ? raw.trim() : null;
   });
 
-  const login = useCallback((token: string) => {
-    localStorage.setItem('admin_token', token);
-    setIsAuthenticated(true);
-  }, []);
+  const [status, setStatus] = useState<AuthStatus>(() => (token ? 'checking' : 'unauthenticated'));
+
+  const verifyInFlight = useRef<Promise<boolean> | null>(null);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('admin_token');
-    setIsAuthenticated(false);
+    localStorage.removeItem(LS_ADMIN_TOKEN_KEY);
+    setToken(null);
+    setStatus('unauthenticated');
+    verifyInFlight.current = null;
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const ensureValidToken = useCallback(async (): Promise<boolean> => {
+    if (!token) {
+      setStatus('unauthenticated');
+      return false;
+    }
+
+    if (status === 'authenticated') return true;
+
+    if (verifyInFlight.current) {
+      return verifyInFlight.current;
+    }
+
+    setStatus('checking');
+
+    const p = verifyAdminToken(token)
+      .then(() => {
+        setStatus('authenticated');
+        return true;
+      })
+      .catch(() => {
+        // Token might have been rotated/invalidated. Clear it to avoid letting the
+        // user into the admin UI with a broken session.
+        logout();
+        return false;
+      })
+      .finally(() => {
+        verifyInFlight.current = null;
+      });
+
+    verifyInFlight.current = p;
+    return p;
+  }, [logout, status, token]);
+
+  const login = useCallback(
+    async (nextToken: string) => {
+      const trimmed = nextToken.trim();
+      if (!trimmed) throw new Error('Missing token');
+
+      setStatus('checking');
+      verifyInFlight.current = null;
+
+      try {
+        await verifyAdminToken(trimmed);
+      } catch (err) {
+        logout();
+        throw err;
+      }
+
+      localStorage.setItem(LS_ADMIN_TOKEN_KEY, trimmed);
+      setToken(trimmed);
+      setStatus('authenticated');
+    },
+    [logout],
   );
+
+  const value = useMemo<AuthContextValue>(() => {
+    return {
+      status,
+      isAuthenticated: status === 'authenticated',
+      login,
+      logout,
+      ensureValidToken,
+    };
+  }, [ensureValidToken, login, logout, status]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -239,6 +239,14 @@ export async function fetchPublicMonitorOutages(
 
 export { ApiError };
 
+// Admin auth
+export async function verifyAdminToken(token: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/auth/verify`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await handleResponse<{ ok: true }>(res);
+}
+
 // Admin API - Monitors
 export async function fetchAdminMonitors(limit = 50): Promise<{ monitors: AdminMonitor[] }> {
   const res = await fetch(`${API_BASE}/admin/monitors?limit=${limit}`, {

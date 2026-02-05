@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
+import { ADMIN_PATH } from '../app/adminPaths';
 import { Button } from '../components/ui';
 
 export function AdminLogin() {
@@ -9,13 +10,30 @@ export function AdminLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/admin';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ADMIN_PATH;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token.trim()) { setError('Please enter a token'); return; }
-    login(token.trim());
-    navigate(from, { replace: true });
+    if (isSubmitting) return;
+
+    const trimmed = token.trim();
+    if (!trimmed) {
+      setError('Please enter a token');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await login(trimmed);
+      navigate(from, { replace: true });
+    } catch {
+      setError('Invalid token');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -44,7 +62,9 @@ export function AdminLogin() {
             />
           </div>
           {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
-          <Button type="submit" className="w-full">Login</Button>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Checking...' : 'Login'}
+          </Button>
         </form>
 
         <div className="mt-6 text-center">

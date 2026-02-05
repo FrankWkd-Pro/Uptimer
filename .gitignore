@@ -14,12 +14,16 @@ build
 !.dev.vars.example
 .env
 .env.*
+!.env.example
 
 # Misc
 coverage
 .DS_Store
 npm-debug.log*
 pnpm-debug.log*
+
+# Accidental local deploy output (pnpm/wrangler --dry-run)
+--dry-run/
 
 # Reference project (do not track in this repo)
 UptimeFlare/

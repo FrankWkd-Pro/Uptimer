@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../app/AuthContext';
+import { ADMIN_ANALYTICS_PATH } from '../app/adminPaths';
 import {
   ApiError,
   fetchAdminMonitors,
@@ -58,6 +59,9 @@ type ModalState =
   | { type: 'create-maintenance' }
   | { type: 'edit-maintenance'; window: MaintenanceWindow };
 
+const SETTINGS_ICON_PATH =
+  'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z';
+
 const tabs: { key: Tab; label: string; icon: string }[] = [
   {
     key: 'monitors',
@@ -77,7 +81,7 @@ const tabs: { key: Tab; label: string; icon: string }[] = [
   {
     key: 'settings',
     label: 'Settings',
-    icon: 'M11.983 1.5a1.5 1.5 0 00-1.47 1.175l-.177.686a1.5 1.5 0 01-1.043 1.043l-.686.177a1.5 1.5 0 00-.967 1.918l.3.86a1.5 1.5 0 01-.356 1.6l-.523.523a1.5 1.5 0 000 2.121l.523.523a1.5 1.5 0 01.356 1.6l-.3.86a1.5 1.5 0 00.967 1.918l.686.177a1.5 1.5 0 011.043 1.043l.177.686a1.5 1.5 0 001.918.967l.86-.3a1.5 1.5 0 011.6.356l.523.523a1.5 1.5 0 002.121 0l.523-.523a1.5 1.5 0 011.6-.356l.86.3a1.5 1.5 0 001.918-.967l.177-.686a1.5 1.5 0 011.043-1.043l.686-.177a1.5 1.5 0 00.967-1.918l-.3-.86a1.5 1.5 0 01.356-1.6l.523-.523a1.5 1.5 0 000-2.121l-.523-.523a1.5 1.5 0 01-.356-1.6l.3-.86a1.5 1.5 0 00-.967-1.918l-.686-.177a1.5 1.5 0 01-1.043-1.043l-.177-.686a1.5 1.5 0 00-1.918-.967l-.86.3a1.5 1.5 0 01-1.6-.356l-.523-.523a1.5 1.5 0 00-2.121 0l-.523.523a1.5 1.5 0 01-1.6.356l-.86-.3a1.5 1.5 0 00-1.918.967zM12 15.75a3.75 3.75 0 110-7.5 3.75 3.75 0 010 7.5z',
+    icon: SETTINGS_ICON_PATH,
   },
   {
     key: 'maintenance',
@@ -346,7 +350,7 @@ export function AdminDashboard() {
           <div className="flex items-center gap-1">
             <ThemeToggle />
             <Link
-              to="/admin/analytics"
+              to={ADMIN_ANALYTICS_PATH}
               className="flex items-center justify-center h-9 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors px-3 rounded-lg"
             >
               <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
