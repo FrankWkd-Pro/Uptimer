@@ -107,11 +107,11 @@ Click the **Fork** button at the top-right of this repository to create your own
 
 |  Scope |  Resource |  Permission |  
 | --- | --- | --- |  
-| ** (Account)** | (Cloudflare Pages) | ** (Edit)** |  
-| * (Account)** | (D1) | **编辑 (Edit)** |  
-| ** (Account)** | (Workers Scripts) | ** (Edit)** |  
-| ** (Account)** | (Account Settings) | ** (Read)** |  
-| ** (User)** | (User Details) | ** (Read)** |  
+| **Account** | Cloudflare Pages | **Edit** |  
+| **Account** | D1 | **Edit** |  
+| **Account** | Workers Scripts | **Edit** |  
+| **Account** | Account Settings | **Read** |  
+| **User** | User Details | **Read** |  
 4. Copy the generated token
 
 ### Step 3 — Add GitHub Secrets
