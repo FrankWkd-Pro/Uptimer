@@ -104,8 +104,14 @@ Click the **Fork** button at the top-right of this repository to create your own
 1. Go to [Cloudflare Dashboard → API Tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. Click **Create Token** → use the **Edit Cloudflare Workers** template
 3. Add the following permissions:
-   - `Account / Cloudflare Pages / Edit`
-   - `Account / D1 / Edit`
+4. 
+| 范围 (Scope) | 资源 (Resource) | 权限 (Permission) |  
+| --- | --- | --- |  
+| **账户 (Account)** | **Cloudflare Pages** (Cloudflare Pages) | **编辑 (Edit)** |  
+| **账户 (Account)** | **D1** (D1) | **编辑 (Edit)** |  
+| **账户 (Account)** | **Workers 脚本** (Workers Scripts) | **编辑 (Edit)** |  
+| **账户 (Account)** | **账户设置** (Account Settings) | **读取 (Read)** |  
+| **用户 (User)** | **用户详细信息** (User Details) | **读取 (Read)** |  
 4. Copy the generated token
 
 ### Step 3 — Add GitHub Secrets
