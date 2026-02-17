@@ -104,8 +104,14 @@ Admin ─────────►│  Workers (Hono API)                     
 1. 前往 [Cloudflare Dashboard → API Tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. 点击 **Create Token** → 使用 **Edit Cloudflare Workers** 模板
 3. 添加以下权限：
-   - `Account / Cloudflare Pages / Edit`
-   - `Account / D1 / Edit`
+
+| 范围 (Scope) | 资源 (Resource) | 权限 (Permission) |  
+| --- | --- | --- |  
+| **账户 (Account)** | **Cloudflare Pages** (Cloudflare Pages) | **编辑 (Edit)** |  
+| **账户 (Account)** | **D1** (D1) | **编辑 (Edit)** |  
+| **账户 (Account)** | **Workers 脚本** (Workers Scripts) | **编辑 (Edit)** |  
+| **账户 (Account)** | **账户设置** (Account Settings) | **读取 (Read)** |  
+| **用户 (User)** | **用户详细信息** (User Details) | **读取 (Read)** |  
 4. 复制生成的 Token
 
 ### 第 3 步 — 添加 GitHub Secrets
